@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Firebase接続テスト</title>
+<style>
+body{font-family:sans-serif;padding:30px;background:#f0f4ff}
+.card{background:#fff;border-radius:12px;padding:24px;max-width:500px;margin:0 auto;box-shadow:0 4px 20px rgba(0,0,0,.1)}
+h2{margin-bottom:20px}
+.inp{width:100%;padding:10px;border-radius:8px;border:1.5px solid #d1d5db;font-size:14px;outline:none;box-sizing:border-box;margin-bottom:10px}
+.btn{width:100%;padding:11px;border-radius:9px;border:none;background:linear-gradient(135deg,#6366f1,#3b82f6);color:#fff;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px}
+.log{background:#111827;color:#4ade80;border-radius:8px;padding:16px;font-family:monospace;font-size:13px;min-height:150px;white-space:pre-wrap;margin-top:16px}
+.err{color:#f87171}
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>🔥 Firebase接続テスト</h2>
+  <input id="email" class="inp" type="email" placeholder="メールアドレス">
+  <input id="pass" class="inp" type="password" placeholder="パスワード">
+  <button class="btn" onclick="runTest()">テスト開始</button>
+  <div class="log" id="log">ボタンを押してテストを開始...</div>
+</div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCGBXVFGs1bUpd47gVDW10sRjaVpEMa07s",
+  authDomain: "adwaku-79211.firebaseapp.com",
+  projectId: "adwaku-79211",
+  storageBucket: "adwaku-79211.firebasestorage.app",
+  messagingSenderId: "465095025516",
+  appId: "1:465095025516:web:125939eb41f6c2f58cc949",
+};
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+function log(msg, isErr=false){
+  const el=document.getElementById("log");
+  const line=document.createElement("div");
+  line.textContent="["+new Date().toLocaleTimeString()+"] "+msg;
+  if(isErr) line.className="err";
+  el.appendChild(line);
+  el.scrollTop=el.scrollHeight;
+}
+
+window.runTest=async function(){
+  document.getElementById("log").innerHTML="";
+  const email=document.getElementById("email").value.trim();
+  const pass=document.getElementById("pass").value;
+
+  log("① ログイン試行中...");
+  try{
+    const cred=await signInWithEmailAndPassword(auth,email,pass);
+    log("✅ ログイン成功："+cred.user.email);
+  }catch(e){
+    log("❌ ログイン失敗："+e.code+" / "+e.message, true);
+    return;
+  }
+
+  log("② Firestore 書き込みテスト...");
+  try{
+    await setDoc(doc(db,"test","ping"),{
+      msg:"hello",
+      at: new Date().toISOString(),
+      by: auth.currentUser.email
+    });
+    log("✅ 書き込み成功！");
+  }catch(e){
+    log("❌ 書き込み失敗："+e.code+" / "+e.message, true);
+    return;
+  }
+
+  log("③ Firestore 読み込みテスト...");
+  try{
+    const snap=await getDoc(doc(db,"test","ping"));
+    log("✅ 読み込み成功："+JSON.stringify(snap.data()));
+  }catch(e){
+    log("❌ 読み込み失敗："+e.code+" / "+e.message, true);
+    return;
+  }
+
+  log("🎉 全テスト通過！Firebaseは正常に動作しています");
+};
+</script>
+</body>
+</html>
